@@ -50,7 +50,8 @@
   #openBtn{
     font-family:'Montserrat',sans-serif; letter-spacing:.2em; text-transform:uppercase; font-size:.72rem;
     background:transparent; color:#fff; border:1px solid rgba(255,255,255,.8); padding:14px 34px; cursor:pointer;
-    transition:background .3s ease;
+    transition:background .3s ease; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+    position:relative; z-index:5;
   }
   #openBtn:hover{background:rgba(255,255,255,.15);}
 
@@ -178,12 +179,15 @@
 <div id="cover">
   <svg class="cover-monogram" viewBox="0 0 230 230" aria-hidden="true" focusable="false">
     <circle cx="115" cy="115" r="106" fill="none" stroke="#e8d9af" stroke-width="1.4" opacity=".75"/>
-    <text x="36" y="152" font-family="'Pinyon Script', cursive" font-size="172" fill="#e8d9af" transform="rotate(-7 115 115)">N</text>
-    <text x="96" y="178" font-family="'Pinyon Script', cursive" font-size="172" fill="#e8d9af" transform="rotate(7 115 115)">S</text>
+    <g font-family="'Pinyon Script', cursive" font-size="150">
+      <text x="78" y="162" fill="#e8d9af" transform="rotate(10 115 115)">S</text>
+      <text x="104" y="148" fill="#15130f" stroke="#15130f" stroke-width="7" stroke-linejoin="round" transform="rotate(-8 115 115)">N</text>
+      <text x="104" y="148" fill="#e8d9af" transform="rotate(-8 115 115)">N</text>
+    </g>
   </svg>
   <div class="names">Nina &amp; Samuel</div>
   <div class="sub">13 Décembre 2026 · Paris</div>
-  <button id="openBtn">Ouvrir l'invitation</button>
+  <button id="openBtn" type="button">Ouvrir l'invitation</button>
 </div>
 
 <button id="musicToggle" aria-label="Musique">♪</button>
@@ -206,8 +210,11 @@
     <div class="names-block">
       <svg class="monogram" viewBox="0 0 230 230" aria-hidden="true" focusable="false">
         <circle cx="115" cy="115" r="108" fill="none" stroke="#c9a646" stroke-width="1" opacity=".55"/>
-        <text x="36" y="152" font-family="'Pinyon Script', cursive" font-size="172" fill="#c9a646" transform="rotate(-7 115 115)">N</text>
-        <text x="96" y="178" font-family="'Pinyon Script', cursive" font-size="172" fill="#c9a646" transform="rotate(7 115 115)">S</text>
+        <g font-family="'Pinyon Script', cursive" font-size="150">
+          <text x="78" y="162" fill="#c9a646" transform="rotate(10 115 115)">S</text>
+          <text x="104" y="148" fill="#ffffff" stroke="#ffffff" stroke-width="7" stroke-linejoin="round" transform="rotate(-8 115 115)">N</text>
+          <text x="104" y="148" fill="#c9a646" transform="rotate(-8 115 115)">N</text>
+        </g>
       </svg>
       <div class="name-script">Nina &amp; Samuel</div>
     </div>
@@ -252,28 +259,51 @@
 </main>
 
 <script>
-  // ---------- OPEN COVER ----------
-  document.getElementById('openBtn').addEventListener('click', () => {
-    document.getElementById('cover').classList.add('hidden');
-  });
+  // ---------- OPEN COVER (robuste : clic + tactile, avec filet de sécurité) ----------
+  (function(){
+    var openBtn = document.getElementById('openBtn');
+    var cover = document.getElementById('cover');
+    var opened = false;
+    function openInvitation(e){
+      if (e && e.preventDefault) e.preventDefault();
+      if (!cover || opened) return;
+      opened = true;
+      cover.classList.add('hidden');
+      cover.style.pointerEvents = 'none';
+      // Filet de sécurité : si la transition CSS ne s'applique pas (ex: animations désactivées), on force la disparition complète.
+      setTimeout(function(){ cover.style.display = 'none'; }, 850);
+    }
+    if (openBtn && cover) {
+      openBtn.addEventListener('click', openInvitation);
+      openBtn.addEventListener('touchend', openInvitation);
+    }
+  })();
 
   // ---------- MUSIC (Earth, Wind & Fire - September, lecteur YouTube officiel) ----------
   let ytPlayer, ytReady = false, musicMuted = false;
-  const ytTag = document.createElement('script');
-  ytTag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(ytTag);
+  try {
+    const ytTag = document.createElement('script');
+    ytTag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(ytTag);
 
-  window.onYouTubeIframeAPIReady = function(){
-    ytPlayer = new YT.Player('yt-player', {
-      videoId: 'Gs069dndIYk',
-      playerVars: { autoplay: 0, controls: 0, disablekb: 1, loop: 1, playlist: 'Gs069dndIYk' },
-      events: { onReady: () => { ytReady = true; } }
+    window.onYouTubeIframeAPIReady = function(){
+      try {
+        ytPlayer = new YT.Player('yt-player', {
+          videoId: 'Gs069dndIYk',
+          playerVars: { autoplay: 0, controls: 0, disablekb: 1, loop: 1, playlist: 'Gs069dndIYk' },
+          events: { onReady: () => { ytReady = true; } }
+        });
+      } catch(e) {}
+    };
+  } catch(e) {}
+
+  (function(){
+    var openBtn = document.getElementById('openBtn');
+    if (!openBtn) return;
+    openBtn.addEventListener('click', () => {
+      try { if (ytReady && ytPlayer) ytPlayer.playVideo(); } catch(e) {}
     });
-  };
-
-  document.getElementById('openBtn').addEventListener('click', () => {
-    if (ytReady) ytPlayer.playVideo();
-  });
+  })();
 
   document.getElementById('musicToggle').addEventListener('click', () => {
     if (!ytReady) return;
